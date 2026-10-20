@@ -1,0 +1,71 @@
+name: Update YouTube LIVE status
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: youtube-live-status
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check YouTube and update JSON
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, urllib.parse, urllib.request
+          from datetime import datetime, timezone
+
+          key = os.environ.get('YOUTUBE_API_KEY', '').strip()
+          channel = os.environ.get('YOUTUBE_CHANNEL_ID', '').strip()
+          if not key or not channel:
+              raise SystemExit('Missing YOUTUBE_API_KEY secret or YOUTUBE_CHANNEL_ID variable')
+
+          params = urllib.parse.urlencode({
+              'part': 'snippet', 'channelId': channel, 'eventType': 'live',
+              'type': 'video', 'maxResults': 1, 'key': key
+          })
+          request = urllib.request.Request(
+              'https://www.googleapis.com/youtube/v3/search?' + params,
+              headers={'User-Agent': 'MashiroLiveStatus/1.0'}
+          )
+          # Fail rather than overwrite with an incorrect OFF state on API errors.
+          with urllib.request.urlopen(request, timeout=25) as response:
+              result = json.load(response)
+          items = result.get('items', [])
+          live = bool(items)
+          item = items[0] if live else {}
+          video_id = item.get('id', {}).get('videoId', '') if live else ''
+          if live and not video_id:
+              raise SystemExit('Live item had no video ID')
+          data = {
+              'live': live,
+              'title': item.get('snippet', {}).get('title', '') if live else '',
+              'url': 'https://www.youtube.com/watch?v=' + video_id if live else '',
+              'checkedAt': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+          }
+          path = pathlib.Path('data/live-status.json')
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print('YouTube LIVE check complete:', 'LIVE' if live else 'OFFLINE')
+          PY
+      - name: Commit status if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/live-status.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update YouTube LIVE status"
+            git push
+          fi
