@@ -84,3 +84,13 @@ body{position:relative;isolation:isolate}
 @keyframes live-pulse{50%{box-shadow:0 0 0 10px #e92b4308}}
 @media(max-width:700px){.live-banner{padding:12px;gap:10px}.live-banner a{width:100%}}
 @media(prefers-reduced-motion:reduce){.live-dot{animation:none}}
+
+/* Today's stream: manually registered, expires at 05:00 JST the next day */
+.today-stream[hidden]{display:none!important}
+.today-stream{max-width:760px;margin:0 0 24px;padding:16px;border:2px solid #e9a7b3;border-radius:16px;background:#fff9fb;box-shadow:0 8px 22px #a8253810}
+.today-stream-heading{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;color:#ba2948}
+.today-stream-heading strong{font-size:16px}.today-stream-heading span{font-weight:700;font-size:14px}
+.today-stream-title{margin:10px 0 12px;font-weight:700;overflow-wrap:anywhere}
+.today-stream-video{aspect-ratio:16/9;background:#1b1b1b;border-radius:10px;overflow:hidden}
+.today-stream-video iframe{display:block;width:100%;height:100%;border:0}
+.today-stream-link{display:inline-block;margin-top:12px;padding:10px 16px;background:#d8203c;color:white!important;border-radius:9px;text-decoration:none;font-weight:800}
